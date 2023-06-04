@@ -1,7 +1,7 @@
 {
     "name": "@awuxtron/logger",
     "description": "A Winston wrapper with additional features",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "type": "module",
     "keywords": [
         "logger",
