@@ -1,6 +1,6 @@
 import { createLogger, format, type LogEntry, Logger as Winston, transports } from 'winston'
 import DailyRotateFile from 'winston-daily-rotate-file'
-import { DEFAULT_FILTER_ENV_KEY, DEFAULT_NAMESPACE_DELIMITER, LOG_LEVELS, LogLevel } from './constants'
+import { DEFAULT_NAMESPACE_DELIMITER, LOG_LEVELS, LogLevel } from './constants'
 import cli from './formatters/cli'
 import context from './formatters/context'
 import error from './formatters/error'
@@ -12,13 +12,13 @@ import { LOGGER_CONTEXT, LOGGER_OPTIONS } from './symbols'
 import { TelegramTransport } from './transports'
 import type { ILogger, LoggerOptions, LogLevel as LogLevelType } from './types'
 
-export type LoggerOptionsWithParentNames = LoggerOptions & {parentNames: string[]}
+export type LoggerOptionsWithParentNames = LoggerOptions & { parentNames: string[] }
 
 export const defaultOptions: LoggerOptionsWithParentNames = {
     silent: false,
     level: LogLevel.INFO,
     nameDelimiter: DEFAULT_NAMESPACE_DELIMITER,
-    filterEnvKey: DEFAULT_FILTER_ENV_KEY,
+    filter: {},
     formats: [],
     parentNames: [],
     json: {},
@@ -27,22 +27,19 @@ export const defaultOptions: LoggerOptionsWithParentNames = {
     telegram: {},
 }
 
-const {combine} = format
+const { combine } = format
 
-export class Logger implements ILogger
-{
+export class Logger implements ILogger {
     public winston: Winston
     public options: LoggerOptionsWithParentNames
 
-    protected constructor(instance: Winston, options: LoggerOptionsWithParentNames)
-    {
+    protected constructor(instance: Winston, options: LoggerOptionsWithParentNames) {
         this.winston = instance
         this.options = options
     }
 
-    public static create(options: Partial<LoggerOptions> = {})
-    {
-        const loggerOptions = {...defaultOptions, ...options}
+    public static create(options: Partial<LoggerOptions> = {}) {
+        const loggerOptions = { ...defaultOptions, ...options }
 
         const transports = [
             this.consoleTransport(loggerOptions),
@@ -61,8 +58,7 @@ export class Logger implements ILogger
         return new Logger(winston, loggerOptions)
     }
 
-    protected static telegramTransport(options: LoggerOptions)
-    {
+    protected static telegramTransport(options: LoggerOptions) {
         const {
             silent = false,
             level = LogLevel.WARN,
@@ -86,8 +82,7 @@ export class Logger implements ILogger
         })
     }
 
-    protected static fileTransport(options: LoggerOptions)
-    {
+    protected static fileTransport(options: LoggerOptions) {
         const {
             silent = false,
             level = LogLevel.WARN,
@@ -105,10 +100,7 @@ export class Logger implements ILogger
         return new DailyRotateFile({
             silent,
             level,
-            format: combine(
-                json(options.json),
-                ...formats,
-            ),
+            format: combine(json(options.json), ...formats),
             filename,
             dirname,
             createSymlink,
@@ -116,8 +108,7 @@ export class Logger implements ILogger
         })
     }
 
-    protected static consoleTransport(options: LoggerOptions)
-    {
+    protected static consoleTransport(options: LoggerOptions) {
         const {
             silent = false,
             level = LogLevel.SILLY,
@@ -137,23 +128,21 @@ export class Logger implements ILogger
         })
     }
 
-    protected static getFormats(options: LoggerOptions)
-    {
+    protected static getFormats(options: LoggerOptions) {
         return combine(
-            name({delimiter: options.nameDelimiter}),
+            name({ delimiter: options.nameDelimiter }),
             filter({
+                ...options.filter,
                 namespaceDelimiter: options.nameDelimiter,
-                filterEnvKey: options.filterEnvKey,
             }),
             context(),
             interpolation(),
             error(),
-            ...options.formats,
+            ...options.formats
         )
     }
 
-    public child(name: string, metadata?: Record<PropertyKey, any>)
-    {
+    public child(name: string, metadata?: Record<PropertyKey, any>) {
         return new Logger(this.winston.child(metadata ?? {}), {
             ...this.options,
             name,
@@ -161,8 +150,7 @@ export class Logger implements ILogger
         })
     }
 
-    public log(level: LogLevel, message: any, ...context: any[])
-    {
+    public log(level: LogLevel, message: any, ...context: any[]) {
         if (this.options.silent) {
             return
         }
@@ -170,38 +158,31 @@ export class Logger implements ILogger
         this.winston.log(this.getLogEntry(level, message, ...context))
     }
 
-    public fatal(message: any, ...args: any[])
-    {
+    public fatal(message: any, ...args: any[]) {
         return this.log(LogLevel.FATAL, message, ...args)
     }
 
-    public error(message: any, ...args: any[])
-    {
+    public error(message: any, ...args: any[]) {
         return this.log(LogLevel.ERROR, message, ...args)
     }
 
-    public warn(message: any, ...args: any[])
-    {
+    public warn(message: any, ...args: any[]) {
         return this.log(LogLevel.WARN, message, ...args)
     }
 
-    public info(message: any, ...args: any[])
-    {
+    public info(message: any, ...args: any[]) {
         return this.log(LogLevel.INFO, message, ...args)
     }
 
-    public debug(message: any, ...args: any[])
-    {
+    public debug(message: any, ...args: any[]) {
         return this.log(LogLevel.DEBUG, message, ...args)
     }
 
-    public trace(message: any, ...args: any[])
-    {
+    public trace(message: any, ...args: any[]) {
         return this.log(LogLevel.TRACE, message, ...args)
     }
 
-    public silly(message: any, ...args: any[])
-    {
+    public silly(message: any, ...args: any[]) {
         return this.log(LogLevel.SILLY, message, ...args)
     }
 
@@ -209,16 +190,14 @@ export class Logger implements ILogger
 
     public profile(id: string | number, level?: LogLevelType, message?: any, ...args: any[]): void
 
-    public profile(...args: any[])
-    {
+    public profile(...args: any[]) {
         const id = args[0]
         const entry = this.getLogEntry(...(args.slice(1) as [any, any]))
 
         this.winston.profile(id, entry)
     }
 
-    protected getLogEntry(level: LogLevelType, message: any, ...context: any[]): LogEntry
-    {
+    protected getLogEntry(level: LogLevelType, message: any, ...context: any[]): LogEntry {
         return {
             level,
             message,

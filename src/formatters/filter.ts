@@ -1,24 +1,24 @@
 import { format } from 'winston'
-import { DEFAULT_FILTER_ENV_KEY, DEFAULT_NAMESPACE_DELIMITER } from '../constants'
+import { DEFAULT_FILTER_ENV_KEY, DEFAULT_NAMESPACE_DELIMITER, LOG_LEVELS } from '../constants'
 import { LOGGER_NAMESPACE } from '../symbols'
+import type { LogLevel } from '../types'
 
-export interface IsMatchOptions
-{
+export interface IsMatchOptions {
     delimiter?: string
     namespaceDelimiter?: string
     exceptCharacter?: string
 }
 
-export interface FilterFormatterOptions extends IsMatchOptions
-{
+export interface FilterFormatterOptions extends IsMatchOptions {
+    level?: LogLevel
+    defaultFilter?: string
     resolveFilter?: () => string | undefined
     filterEnvKey?: string
     namespaceKey?: PropertyKey
 }
 
-export function isMatch(pattern: string, input: string, options: IsMatchOptions = {})
-{
-    const {delimiter = ',', namespaceDelimiter = DEFAULT_NAMESPACE_DELIMITER, exceptCharacter = '-'} = options
+export function isMatch(pattern: string, input: string, options: IsMatchOptions = {}) {
+    const { delimiter = ',', namespaceDelimiter = DEFAULT_NAMESPACE_DELIMITER, exceptCharacter = '-' } = options
 
     let isMatched = false
     let hasOnlyExcept = true
@@ -33,7 +33,7 @@ export function isMatch(pattern: string, input: string, options: IsMatchOptions 
             hasOnlyExcept = false
         }
 
-        if (item.endsWith(`${ namespaceDelimiter }*`)) {
+        if (item.endsWith(`${namespaceDelimiter}*`)) {
             item = item.slice(0, -2)
         }
 
@@ -53,13 +53,23 @@ export function isMatch(pattern: string, input: string, options: IsMatchOptions 
 
 const formatter = format((info, options: FilterFormatterOptions) => {
     const {
-        resolveFilter = () => process.env[filterEnvKey],
+        level = 'debug',
+        defaultFilter = '-*',
+        resolveFilter = () => process.env[filterEnvKey] ?? defaultFilter,
         filterEnvKey = DEFAULT_FILTER_ENV_KEY,
         namespaceKey = LOGGER_NAMESPACE,
         ...isMatchOptions
     } = options
 
+    if (LOG_LEVELS[info.level] < LOG_LEVELS[level]) {
+        return info
+    }
+
     const filter = resolveFilter()
+
+    if (filter == '-*') {
+        return false
+    }
 
     if (!filter) {
         return info
