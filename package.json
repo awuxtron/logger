@@ -27,7 +27,7 @@
     },
     "scripts": {
         "build": "rimraf dist && tsc",
-        "release": "np --no-yarn --yolo",
+        "release": "np --no-yarn --no-release-draft --yolo",
         "up": "ncu -i",
         "lint": "pnpm prettier '**/*.!(js|ts)' && pnpm eslint .",
         "eslint": "eslint --ignore-path .gitignore --fix",
