@@ -2,12 +2,10 @@ import type { Format, TransformableInfo as BaseTransformableInfo } from 'logform
 import type { DailyRotateFileTransportOptions } from 'winston-daily-rotate-file'
 import { ConsoleTransportOptions } from 'winston/lib/winston/transports'
 import { LOG_LEVELS, LogLevel as LogLevelEnum } from './constants'
-import type { CliFormatterOptions, FilterFormatterOptions, JsonFormatterOptions } from './formatters'
+import type { CliFormatterOptions, FilterFormatterOptions } from './formatters'
 import type { TelegramTransportOptions } from './transports'
 
-export interface TransformableInfo extends BaseTransformableInfo {
-    //
-}
+export type TransformableInfo = BaseTransformableInfo
 
 export type LogHandler = (message: any, ...args: any[]) => void
 
@@ -26,9 +24,10 @@ export interface LoggerOptions {
     level: LogLevel
     name?: string
     nameDelimiter: string
-    filter: Omit<FilterFormatterOptions, 'namespaceDelimiter'>
+    filter: FilterFormatterOptions
     formats: Format[]
-    json: JsonFormatterOptions
+    handleExceptions: boolean
+    handleRejections: boolean
     console: Partial<LoggerTransportOptions & CliFormatterOptions & ConsoleTransportOptions>
     file: Partial<LoggerTransportOptions & DailyRotateFileTransportOptions>
     telegram: Partial<LoggerTransportOptions & TelegramTransportOptions>

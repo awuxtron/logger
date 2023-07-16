@@ -1,81 +1,82 @@
-import { format } from 'winston'
-import { DEFAULT_FILTER_ENV_KEY, DEFAULT_NAMESPACE_DELIMITER, LOG_LEVELS } from '../constants'
+import type { Format } from 'logform'
+import { DEFAULT_FILTER_ENV_KEY, LOG_LEVELS } from '../constants'
+import type { LogLevel, TransformableInfo } from '../types'
 import { LOGGER_NAMESPACE } from '../symbols'
-import type { LogLevel } from '../types'
 
-export interface IsMatchOptions {
-    delimiter?: string
-    namespaceDelimiter?: string
-    exceptCharacter?: string
-}
-
-export interface FilterFormatterOptions extends IsMatchOptions {
+export interface FilterFormatterOptions {
+    enable?: boolean
     level?: LogLevel
     defaultFilter?: string
-    resolveFilter?: () => string | undefined
+    filterResolver?: () => string
     filterEnvKey?: string
-    namespaceKey?: PropertyKey
 }
 
-export function isMatch(pattern: string, input: string, options: IsMatchOptions = {}) {
-    const { delimiter = ',', namespaceDelimiter = DEFAULT_NAMESPACE_DELIMITER, exceptCharacter = '-' } = options
+export class LogFilterFormat implements Format {
+    public readonly level: LogLevel
+    public readonly filter: string
+    public readonly includes: RegExp[] = []
+    public readonly excludes: RegExp[] = []
 
-    let isMatched = false
-    let hasOnlyExcept = true
+    public constructor(public readonly options: FilterFormatterOptions = {}) {
+        const resolver = () => process.env[filterEnvKey] ?? defaultFilter
+        const { defaultFilter = '-*', filterEnvKey = DEFAULT_FILTER_ENV_KEY, filterResolver = resolver } = options
+        const { enable = true, level = 'debug' } = options
 
-    for (let item of pattern.split(delimiter)) {
-        let isExcept = false
+        this.level = level
+        this.filter = enable ? filterResolver() : '*'
 
-        if (item.startsWith(exceptCharacter)) {
-            isExcept = true
-            item = item.slice(1)
-        } else {
-            hasOnlyExcept = false
-        }
+        const { includes, excludes } = LogFilterFormat.parseFilter(this.filter)
 
-        if (item.endsWith(`${namespaceDelimiter}*`)) {
-            item = item.slice(0, -2)
-        }
+        this.includes = includes
+        this.excludes = excludes
+    }
 
-        const regex = new RegExp(`^${item.replace('*', '.*')}(${namespaceDelimiter}.*)?$`)
+    public static parseFilter(filter: string) {
+        const includes: RegExp[] = []
+        const excludes: RegExp[] = []
 
-        if (regex.test(input)) {
-            if (isExcept) {
-                return false
+        for (let item of filter.split(/[\s,]+/)) {
+            if (!item) {
+                continue
             }
 
-            isMatched = true
+            item = item.replaceAll('*', '.*?')
+
+            if (item.startsWith('-')) {
+                excludes.push(new RegExp(`^${item.slice(1)}$`))
+            } else {
+                includes.push(new RegExp(`^${item}$`))
+            }
         }
+
+        return { includes, excludes }
     }
 
-    return hasOnlyExcept ? true : isMatched
+    public transform(info: TransformableInfo) {
+        if (LOG_LEVELS[info.level] < LOG_LEVELS[this.level]) {
+            return info
+        }
+
+        return this.isEnabled(info[LOGGER_NAMESPACE]) ? info : false
+    }
+
+    public isEnabled(name?: string) {
+        if (this.filter === '*') {
+            return true
+        }
+
+        if (this.filter === '-*' || !name) {
+            return false
+        }
+
+        if (this.excludes.some((i) => i.test(name))) {
+            return false
+        }
+
+        return this.includes.some((i) => i.test(name))
+    }
 }
 
-const formatter = format((info, options: FilterFormatterOptions) => {
-    const {
-        level = 'debug',
-        defaultFilter = '-*',
-        resolveFilter = () => process.env[filterEnvKey] ?? defaultFilter,
-        filterEnvKey = DEFAULT_FILTER_ENV_KEY,
-        namespaceKey = LOGGER_NAMESPACE,
-        ...isMatchOptions
-    } = options
-
-    if (LOG_LEVELS[info.level] < LOG_LEVELS[level]) {
-        return info
-    }
-
-    const filter = resolveFilter()
-
-    if (filter == '-*') {
-        return false
-    }
-
-    if (!filter) {
-        return info
-    }
-
-    return isMatch(filter, info[namespaceKey] ?? '', isMatchOptions) ? info : false
-})
-
-export default formatter as (options?: FilterFormatterOptions) => ReturnType<typeof formatter>
+export default function filter(options: FilterFormatterOptions = {}) {
+    return new LogFilterFormat(options)
+}

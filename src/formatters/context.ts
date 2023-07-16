@@ -9,6 +9,10 @@ const formatter = format((info) => {
         info[LOGGER_PAYLOAD] = []
     }
 
+    if (info[LOGGER_CONTEXT] && info[LOGGER_CONTEXT].length === 1 && typeof info[LOGGER_CONTEXT][0] === 'function') {
+        info[LOGGER_CONTEXT] = info[LOGGER_CONTEXT][0]()
+    }
+
     // if the message not is a string, move it to payload.
     if (typeof info['message'] !== 'string') {
         info[LOGGER_PAYLOAD].push(info['message'])

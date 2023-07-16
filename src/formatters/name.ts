@@ -3,21 +3,16 @@ import { DEFAULT_NAMESPACE_DELIMITER } from '../constants'
 import { LOGGER_NAMESPACE, LOGGER_OPTIONS } from '../symbols'
 import type { LoggerOptions, TransformableInfo } from '../types'
 
-export interface NameFormatterOptions
-{
+export interface NameFormatterOptions {
     key?: string
     delimiter?: string
-    resolveOptions?: (info: TransformableInfo) => LoggerOptions
+    optionsResolver?: (info: TransformableInfo) => LoggerOptions
 }
 
 const formatter = format((info, opts: NameFormatterOptions = {}) => {
-    const {
-        key = LOGGER_NAMESPACE,
-        delimiter = DEFAULT_NAMESPACE_DELIMITER,
-        resolveOptions = (i) => i[LOGGER_OPTIONS],
-    } = opts
-
-    const loggerOptions = resolveOptions(info)
+    const resolver = (i) => i[LOGGER_OPTIONS]
+    const { key = LOGGER_NAMESPACE, delimiter = DEFAULT_NAMESPACE_DELIMITER, optionsResolver = resolver } = opts
+    const loggerOptions = optionsResolver(info)
 
     const ns = [
         ...(loggerOptions?.parentNames ?? []),

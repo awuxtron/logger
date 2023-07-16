@@ -10,6 +10,4 @@ export const LOGGER_INTERPOLATION = Symbol.for('interpolation')
 
 export const LOGGER_TIME = Symbol.for('timestamp')
 
-export const LOGGER_ERROR = Symbol.for('error')
-
-export const LOGGER_RAW_ERROR = Symbol.for('error-raw')
+export const LOGGER_ERRORS = Symbol.for('errors')

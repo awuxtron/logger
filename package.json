@@ -1,61 +1,95 @@
 {
     "name": "@awuxtron/logger",
-    "description": "A Winston wrapper with additional features",
     "version": "0.0.2",
-    "type": "module",
-    "keywords": [
-        "logger",
-        "winston"
-    ],
-    "homepage": "https://github.com/awuxtron/logger#readme",
-    "repository": "github:awuxtron/logger",
-    "bugs": {
-        "email": "awuxtron@gmail.com",
-        "url": "https://github.com/awuxtron/logger/issues"
-    },
+    "description": "A simple logging library for Node.js applications based on Winston.",
     "license": "MIT",
-    "author": "Diep Dang <awuxtron@gmail.com> (https://awuxtron.dev)",
+    "author": "Diep Dang <khangdt3107@gmail.com>",
+    "homepage": "https://github.com/khangdt22/logger",
+    "repository": "github:khangdt22/logger",
+    "bugs": {
+        "email": "khangdt3107@gmail.com",
+        "url": "https://github.com/khangdt22/logger/issues"
+    },
+    "type": "module",
+    "files": [
+        "dist"
+    ],
+    "exports": {
+        "default": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+    },
+    "packageManager": "pnpm@8.6.7",
+    "engines": {
+        "node": ">=16.17.0"
+    },
     "publishConfig": {
         "access": "public"
     },
     "scripts": {
-        "build": "tsc --noEmit && tsup src/index.ts --dts --sourcemap --format esm,cjs",
-        "prepublishOnly": "npm run build",
-        "release": "bumpp && npm publish"
-    },
-    "files": [
-        "dist"
-    ],
-    "sideEffects": false,
-    "main": "./dist/index.cjs",
-    "module": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "exports": {
-        ".": {
-            "types": "./dist/index.d.ts",
-            "import": "./dist/index.js",
-            "require": "./dist/index.cjs"
-        }
-    },
-    "peerDependencies": {
-        "winston": ">=3.0"
+        "build": "rimraf dist && tsc",
+        "release": "np --no-yarn",
+        "up": "ncu -i",
+        "lint": "pnpm prettier '**/*.!(js|ts)' && pnpm eslint .",
+        "eslint": "eslint --ignore-path .gitignore --fix",
+        "prettier": "prettier --ignore-path .gitignore --ignore-unknown --write",
+        "preinstall": "npx only-allow pnpm",
+        "prepare": "simple-git-hooks",
+        "prepublishOnly": "pnpm build"
     },
     "dependencies": {
+        "@khangdt22/utils": "npm:@awuxtron/utils@latest",
         "bottleneck": "^2.19.5",
-        "chalk": "^5.2.0",
+        "chalk": "^5.3.0",
+        "clean-stack": "^5.2.0",
+        "error-serializer": "^6.0.1",
         "fecha": "^4.2.3",
+        "is-error-instance": "^2.0.0",
+        "logform": "^2.5.1",
+        "merge-error-cause": "^4.0.1",
         "node-fetch": "^3.3.1",
-        "serialize-error": "^11.0.0",
+        "normalize-exception": "^3.0.0",
         "telegram-format": "^2.1.0",
+        "term-size": "^3.0.2",
         "winston-daily-rotate-file": "^4.7.1",
         "winston-transport": "^4.5.0"
     },
     "devDependencies": {
-        "@types/node": "^20.2.5",
-        "bumpp": "^9.1.0",
-        "logform": "^2.5.1",
-        "tsup": "^6.7.0",
-        "typescript": "^5.0.4",
-        "winston": "^3.9.0"
+        "@commitlint/cli": "^17.6.6",
+        "@commitlint/config-conventional": "latest",
+        "@khangdt22/eslint-config": "latest",
+        "@khangdt22/prettier-config": "npm:@awuxtron/prettier-config@latest",
+        "@types/node": "^20.4.2",
+        "eslint": "^8.45.0",
+        "lint-staged": "^13.2.3",
+        "np": "^8.0.4",
+        "npm-check-updates": "^16.10.15",
+        "only-allow": "^1.1.1",
+        "prettier": "^3.0.0",
+        "rimraf": "^5.0.1",
+        "simple-git-hooks": "^2.8.1",
+        "typescript": "^5.1.6",
+        "winston": "^3.10.0"
+    },
+    "peerDependencies": {
+        "winston": ">=3.0"
+    },
+    "commitlint": {
+        "extends": "@commitlint/config-conventional"
+    },
+    "eslintConfig": {
+        "extends": "@khangdt22",
+        "rules": {
+            "unicorn/no-array-push-push": "off",
+            "promise/no-callback-in-promise": "off"
+        }
+    },
+    "lint-staged": {
+        "*.{js,ts}": "pnpm eslint",
+        "*.!(js|ts)": "pnpm prettier"
+    },
+    "prettier": "@khangdt22/prettier-config",
+    "simple-git-hooks": {
+        "commit-msg": "npx --no -- commitlint --edit ${1}",
+        "pre-commit": "npx tsc --noEmit && npx lint-staged"
     }
 }

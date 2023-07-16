@@ -18,8 +18,7 @@ export const LOG_COLORS = <const>{
     silly: 'white',
 }
 
-export enum LogLevel
-{
+export enum LogLevel {
     FATAL = 'fatal',
     ERROR = 'error',
     WARN = 'warn',
@@ -31,4 +30,4 @@ export enum LogLevel
 
 export const DEFAULT_NAMESPACE_DELIMITER = ':'
 
-export const DEFAULT_FILTER_ENV_KEY = 'LOG_FILTER'
+export const DEFAULT_FILTER_ENV_KEY = 'DEBUG'

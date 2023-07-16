@@ -1,15 +1,19 @@
+import type { InspectOptions } from 'node:util'
+import { inspect } from 'node:util'
 import Bottleneck from 'bottleneck'
 import { format as formatTime } from 'fecha'
 import fetch from 'node-fetch'
 import { html as fmt } from 'telegram-format'
-import { inspect } from 'util'
 import Transport, { type TransportStreamOptions } from 'winston-transport'
+import mergeErrorCause from 'merge-error-cause'
+import { chunkString } from '@khangdt22/utils'
+import cleanStack from 'clean-stack'
 import type { TransformableInfo } from '../types'
+import { LOGGER_ERRORS, LOGGER_NAMESPACE, LOGGER_PAYLOAD, LOGGER_TIME } from '../symbols'
 
 export type TelegramParseMode = 'MarkdownV2' | 'Markdown' | 'HTML'
 
-export interface TelegramSendMessageOptions
-{
+export interface TelegramSendMessageOptions {
     messageThreadId?: number
     entities?: any[]
     disableWebPagePreview?: boolean
@@ -20,8 +24,7 @@ export interface TelegramSendMessageOptions
     reply_markup?: any
 }
 
-export interface TelegramTransportOptions extends TransportStreamOptions
-{
+export interface TelegramTransportOptions extends TransportStreamOptions {
     botToken: string
     chatId: string | number
     timeFormat?: string
@@ -30,13 +33,7 @@ export interface TelegramTransportOptions extends TransportStreamOptions
     sendMessageOptions?: TelegramSendMessageOptions
 }
 
-function capitalize(input: string)
-{
-    return input.charAt(0).toUpperCase() + input.slice(1)
-}
-
-export default class TelegramTransport extends Transport
-{
+export default class TelegramTransport extends Transport {
     protected botToken: string
     protected chatId: string | number
     protected timeFormat: string
@@ -45,8 +42,7 @@ export default class TelegramTransport extends Transport
     protected formatMessage: (info: TransformableInfo) => string
     protected limiter: Bottleneck
 
-    public constructor(options: TelegramTransportOptions)
-    {
+    public constructor(options: TelegramTransportOptions) {
         super(options)
 
         this.botToken = options.botToken
@@ -57,25 +53,34 @@ export default class TelegramTransport extends Transport
         this.formatMessage = options.formatMessage ?? ((info) => this._formatMessage(info))
 
         this.limiter = new Bottleneck({
-            minTime: 3000,
+            reservoir: 20,
+            reservoirRefreshInterval: 60 * 1000,
+            reservoirIncreaseAmount: 20,
+            minTime: 30 / 1000,
             maxConcurrent: 1,
         })
     }
 
-    public log(info: TransformableInfo, next)
-    {
-        const sender = this.limiter.schedule(() => this.send(this.formatMessage(info)))
+    public override log(info: TransformableInfo, next) {
+        const sender = this.send(this.formatMessage(info))
 
-        sender.catch(error => {
+        sender.catch((error) => {
             this.emit('error', error)
         })
 
         next(null)
     }
 
-    protected async send(message: string)
-    {
-        const url = `https://api.telegram.org/bot${ this.botToken }/sendMessage`
+    protected async send(message: string) {
+        for (const msg of chunkString(message, 4096)) {
+            await this.limiter.schedule(() => this._send(msg))
+        }
+
+        this.emit('logged')
+    }
+
+    protected async _send(message: string) {
+        const url = `https://api.telegram.org/bot${this.botToken}/sendMessage`
 
         const data = {
             chat_id: this.chatId,
@@ -97,41 +102,62 @@ export default class TelegramTransport extends Transport
             const result = await response.json()
 
             if (response.ok) {
-                return this.emit('logged')
+                return
             }
 
-            this.emit('error', {result, request, response})
+            return this.emit('error', { result, request, response })
         })
 
         request.catch((error) => {
-            this.emit('error', {error, request})
+            this.emit('error', { error, request })
         })
+
+        await request
     }
 
-    protected _formatMessage(info: TransformableInfo)
-    {
-        const data = Object.entries(JSON.parse(info[Symbol.for('message')])).map(([key, value]: [string, any]) => {
-            if (key == 'level') {
-                value = value.toUpperCase()
-            }
+    protected _formatMessage(info: TransformableInfo) {
+        const message: string[] = [
+            `• Level: ${fmt.bold(info.level.toUpperCase())}`,
+            `• Time: ${fmt.bold(formatTime(new Date(info[LOGGER_TIME]), this.timeFormat))}`,
+        ]
 
-            if (key == 'timestamp') {
-                key = 'time'
-                value = formatTime(new Date(value), this.timeFormat)
-            }
+        if (info[LOGGER_NAMESPACE]) {
+            message.push(`• Name: ${fmt.bold(info[LOGGER_NAMESPACE])}`)
+        }
 
-            if (key == 'payload') {
-                return `• Payload:\n` + fmt.monospaceBlock(inspect(value, {compact: true, breakLength: Infinity}))
-            }
+        if (info['message']?.length) {
+            message.push(`• Message: ${fmt.monospace(info['message'])}`)
+        }
 
-            if (key == 'stack') {
-                return `• Stack:\n` + fmt.monospaceBlock(value)
-            }
+        if (info[LOGGER_ERRORS]?.length) {
+            for (let error of info[LOGGER_ERRORS]) {
+                error = mergeErrorCause(error)
+                error.stack = cleanStack(error.stack)
 
-            return `• ${ capitalize(key) }: ${ key == 'message' || key == 'error' ? fmt.monospace(value) : fmt.bold(
-                value) }`
+                message.push('• Error:')
+                message.push(fmt.monospaceBlock(this.inspect(error)))
+            }
+        }
+
+        if (info[LOGGER_PAYLOAD]?.length) {
+            message.push('• Payload:')
+
+            message.push(
+                fmt.monospaceBlock(this.inspect(info[LOGGER_PAYLOAD], {
+                    compact: true,
+                    breakLength: Number.POSITIVE_INFINITY,
+                }))
+            )
+        }
+
+        return message.join('\n')
+    }
+
+    protected inspect(value: any, options: InspectOptions = {}) {
+        return inspect(value, {
+            ...options,
+            maxArrayLength: Number.POSITIVE_INFINITY,
+            maxStringLength: Number.POSITIVE_INFINITY,
         })
-
-        return data.join('\n')
     }
 }
