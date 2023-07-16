@@ -1,5 +1,5 @@
 import { Logger } from './logger'
-import type { LoggerOptions } from './types'
+import type { UserLoggerOptions } from './types'
 
 export * as errors from './errors'
 export * as formatters from './formatters'
@@ -11,7 +11,7 @@ export * as symbols from './symbols'
 export * from './logger'
 export * from './types'
 
-export function createLogger(options: Partial<LoggerOptions> = {}) {
+export function createLogger(options: UserLoggerOptions = {}) {
     return Logger.create(options)
 }
 

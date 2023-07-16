@@ -14,9 +14,10 @@
     "files": [
         "dist"
     ],
+    "types": "./dist/index.d.ts",
     "exports": {
-        "default": "./dist/index.js",
-        "types": "./dist/index.d.ts"
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
     },
     "packageManager": "pnpm@8.6.7",
     "engines": {

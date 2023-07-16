@@ -32,3 +32,5 @@ export interface LoggerOptions {
     file: Partial<LoggerTransportOptions & DailyRotateFileTransportOptions>
     telegram: Partial<LoggerTransportOptions & TelegramTransportOptions>
 }
+
+export type UserLoggerOptions = Partial<LoggerOptions>

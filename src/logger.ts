@@ -12,7 +12,7 @@ import json from './formatters/json'
 import name from './formatters/name'
 import { LOGGER_CONTEXT, LOGGER_OPTIONS } from './symbols'
 import { TelegramTransport } from './transports'
-import type { ILogger, LoggerOptions, LogLevel as LogLevelType } from './types'
+import type { ILogger, LoggerOptions, LogLevel as LogLevelType, UserLoggerOptions } from './types'
 import { gracefulExit, registerTransportExitHandler, WANT_EXIT } from './utils'
 import { UnhandledRejectionError } from './errors'
 
@@ -45,7 +45,7 @@ export class Logger implements ILogger {
         this.options = options
     }
 
-    public static create(options: Partial<LoggerOptions> = {}) {
+    public static create(options: UserLoggerOptions = {}) {
         const loggerOptions = { ...defaultOptions, ...options }
 
         const transports = [
