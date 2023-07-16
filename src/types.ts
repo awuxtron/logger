@@ -1,7 +1,7 @@
 import type { Format, TransformableInfo as BaseTransformableInfo } from 'logform'
 import type { DailyRotateFileTransportOptions } from 'winston-daily-rotate-file'
-import { ConsoleTransportOptions } from 'winston/lib/winston/transports'
-import { LOG_LEVELS, LogLevel as LogLevelEnum } from './constants'
+import type { ConsoleTransportOptions } from 'winston/lib/winston/transports'
+import type { LOG_LEVELS, LogLevel as LogLevelEnum } from './constants'
 import type { CliFormatterOptions, FilterFormatterOptions } from './formatters'
 import type { TelegramTransportOptions } from './transports'
 
