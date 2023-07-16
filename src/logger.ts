@@ -201,8 +201,7 @@ export class Logger implements ILogger {
         }
 
         if (this.options.handleExceptions) {
-            // eslint-disable-next-line @typescript-eslint/no-throw-literal
-            throw WANT_EXIT
+            throw (WANT_EXIT as any)
         }
 
         return gracefulExit(code) as never

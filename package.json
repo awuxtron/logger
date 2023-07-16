@@ -77,11 +77,7 @@
         "extends": "@commitlint/config-conventional"
     },
     "eslintConfig": {
-        "extends": "@khangdt22",
-        "rules": {
-            "unicorn/no-array-push-push": "off",
-            "promise/no-callback-in-promise": "off"
-        }
+        "extends": "@khangdt22"
     },
     "lint-staged": {
         "*.{js,ts}": "pnpm eslint",
