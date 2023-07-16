@@ -1,6 +1,6 @@
 {
     "name": "@awuxtron/logger",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "description": "A simple logging library for Node.js applications based on Winston.",
     "license": "MIT",
     "author": "Diep Dang <khangdt3107@gmail.com>",
